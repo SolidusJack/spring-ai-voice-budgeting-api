@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import solidusjack.budgeting.model.Gasto;
 import solidusjack.budgeting.repository.GastoRepository;
 import jakarta.validation.Valid;
+import solidusjack.budgeting.dto.GastoRequest;
 
 @RestController
 @RequestMapping("/api/gastos") 
@@ -23,7 +24,9 @@ public class GastoController {
     }
     
     @PostMapping
-    public Gasto cadastrar(@Valid @RequestBody Gasto novoGasto) {
+    public Gasto cadastrar(@Valid @RequestBody GastoRequest dadosEntrada) {
+        Gasto novoGasto = new Gasto(dadosEntrada.categoria(), dadosEntrada.valor());
+        
         return repository.save(novoGasto);
     }
 
