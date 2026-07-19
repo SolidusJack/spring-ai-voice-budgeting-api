@@ -1,111 +1,211 @@
 # 🎙️ Budgeting AI - Voice Expense Tracker
 
-Uma API REST desenvolvida em **Spring Boot 3** que revoluciona a forma de registrar finanças pessoais.  
-Em vez de preencher formulários chatos ou JSONs complexos, o usuário simplesmente envia um áudio gravado dizendo o que gastou (ex: **"Gastei 50 reais em um Gift Card do XBOX"**). O sistema processa a voz, entende o contexto com Inteligência Artificial e salva o registro automaticamente no banco de dados.
+Uma API REST desenvolvida com **Java 21** e **Spring Boot 3** que permite registrar despesas por comando de voz.
+
+Em vez de preencher formulários, o usuário envia um áudio descrevendo um gasto (por exemplo: *"Gastei 50 reais em um Gift Card do Xbox"*). A aplicação realiza a transcrição, interpreta a intenção utilizando um modelo de linguagem e registra automaticamente a transação no banco de dados.
+
+> **Status:** ✅ Funcional
+>
+> Atualmente o envio do áudio é realizado via **Postman**. A interface web para gravação direta faz parte do roadmap do projeto.
 
 ---
 
-## 🚀 Tecnologias Utilizadas
+# 🚀 Tecnologias Utilizadas
 
-- **Java 21** (aproveitando os recursos mais recentes da LTS)
-- **Spring Boot 3**
-- **Spring AI**: integração nativa e gerenciamento de modelos de IA
-- **Groq API (Whisper Large V3)**: transcrição ultra-rápida de áudio para texto
-- **OpenRouter API**: processamento de linguagem natural (LLM) e interpretação do texto
-- **MySQL**: persistência dos gastos
-- **Postman**: validação e testes de integração dos endpoints
+- **Java 21** — linguagem principal
+- **Spring Boot 3** — desenvolvimento da API REST
+- **Spring AI** — integração com modelos de IA
+- **Groq API (Whisper Large V3)** — Speech-to-Text
+- **OpenRouter API** — interpretação da linguagem natural e Function Calling
+- **MySQL** — persistência dos dados
+- **Postman** — testes dos endpoints
 
 ---
 
-## 🧠 Arquitetura do Fluxo
+# ✨ Funcionalidades
 
-O sistema opera dividindo a responsabilidade em três pilares principais:
+- ✅ Upload de arquivos de áudio (.mp3, .wav, .m4a)
+- ✅ Transcrição automática utilizando Whisper Large V3
+- ✅ Interpretação do contexto usando LLM
+- ✅ Registro automático de despesas no MySQL
+- ✅ Consulta de gastos por linguagem natural
+- ✅ Function Calling utilizando Spring AI
+- ✅ Arquitetura em camadas
+
+---
+
+# 🏗️ Arquitetura
+
+O fluxo da aplicação é dividido em três responsabilidades principais:
 
 ```text
-[ Usuário ] -> ( Envia .mp3 ) -> [ AudioController ]
-                                        |
-    +-----------------------------------+
-    |
-    v
-[ 1. O Ouvido: AudioService ] ----> ( API da Groq / Whisper ) -> Retorna Texto Puro
-    |
-    v
-[ 2. O Cérebro: ChatClient ] -----> ( OpenRouter / LLM ) ------> Entende o contexto
-    |                                      |
-    |                                      v
-    +--------------------------> [ 3. Os Braços: TransactionTools ] -> Grava no MySQL
+[ Usuário ]
+      |
+      | Envia arquivo de áudio (.mp3)
+      v
++----------------------+
+|  AudioController     |
++----------------------+
+          |
+          v
++----------------------+
+|  AudioService        |
+| Speech-to-Text       |
++----------------------+
+          |
+          | Groq API (Whisper)
+          v
+Texto transcrito
+          |
+          v
++----------------------+
+| Spring AI ChatClient |
+| NLP + Function Call  |
++----------------------+
+          |
+          v
++----------------------+
+| TransactionTools     |
+| Persistência         |
++----------------------+
+          |
+          v
+        MySQL
 ```
 
-### 1) O Ouvido (Speech-to-Text)
-O `AudioService` recebe o arquivo de áudio e se comunica com a API da Groq usando o modelo `whisper-large-v3`, transformando o som em `String`.
+## 1. Speech-to-Text
 
-### 2) O Cérebro (Natural Language Processing)
-O `ChatClient` (Spring AI) recebe o texto transcrito e, através do OpenRouter, interpreta o valor, o produto e a categoria do gasto.
-
-### 3) Os Braços (Function Calling)
-A IA decide dinamicamente acionar o componente `TransactionTools`, que executa a lógica de persistência direto no repositório MySQL.
+O `AudioService` recebe o arquivo enviado pelo usuário e utiliza o modelo **Whisper Large V3**, através da API da Groq, para converter o áudio em texto.
 
 ---
 
-## 🔒 Segurança em Primeiro Lugar
+## 2. Interpretação da Linguagem Natural
 
-O projeto foi estruturado seguindo boas práticas de segurança para evitar vazamento de chaves privadas no GitHub:
+Após a transcrição, o texto é enviado ao `ChatClient` (Spring AI), que utiliza um modelo hospedado no **OpenRouter** para identificar informações como:
 
-- As credenciais confidenciais (`AUDIO_API_KEY`) ficam armazenadas estritamente em variáveis de ambiente locais da máquina de desenvolvimento.
-- O arquivo `application.properties` utiliza apenas referências dinâmicas:
-  - `app.audio.api-key=${AUDIO_API_KEY}`
-- Arquivos de configuração local sensíveis estão devidamente catalogados no `.gitignore`.
-
----
-
-## 🛠️ Como Executar o Projeto Localmente
-
-### Pré-requisitos
-
-- JDK 21 instalado e configurado
-- Instância do MySQL ativa
-- Chaves de API da Groq e do OpenRouter
-
-### Configuração do Ambiente no STS 4 (Spring Tool Suite)
-
-1. Importe o projeto como **Existing Maven Project**.
-2. Clique com o botão direito no projeto → **Run As** → **Spring Boot App** (ou configure via **Run Configurations...**).
-3. Na janela de configuração de execução, acesse a aba **Environment**.
-4. Adicione a sua chave secreta da Groq:
-   - **Name:** `AUDIO_API_KEY`
-   - **Value:** `gsk_sua_chave_aqui`
-5. Aplique e execute o projeto.
+- Valor
+- Produto
+- Categoria da despesa
 
 ---
 
-## 🧪 Como Testar no Postman
+## 3. Function Calling
 
-Para testar a rota de processamento de voz por completo:
+Depois da interpretação, a IA decide quando executar a ferramenta `TransactionTools`, responsável por persistir os dados no banco MySQL utilizando o repositório da aplicação.
 
-- **Método:** `POST`
-- **URL:** `http://localhost:8080/api/audio/transcrever`
-- **Body:** selecione `form-data`
-- **Key:** `file` (mude o tipo do campo de **Text** para **File** no Postman)
-- **Value:** selecione um arquivo de áudio curto (`.mp3`, `.m4a` ou `.wav`) contendo a frase do seu gasto
+---
 
-### Exemplo de Resposta (`200 OK`)
+# 📂 Estrutura do Projeto
+
+```text
+src
+└── main
+    ├── controller
+    ├── service
+    ├── model
+    ├── repository
+    ├── dto
+    ├── config
+    └── exception
+```
+
+---
+
+# 🔒 Segurança
+
+As credenciais da aplicação não ficam armazenadas no código-fonte.
+
+As chaves de API são carregadas através de variáveis de ambiente.
+
+Exemplo:
+
+```properties
+app.audio.api-key=${AUDIO_API_KEY}
+```
+
+Os arquivos locais contendo configurações sensíveis estão incluídos no `.gitignore`.
+
+---
+
+# ⚙️ Como Executar
+
+## Pré-requisitos
+
+- JDK 21
+- Maven
+- MySQL
+- Chave da API Groq
+- Chave da API OpenRouter
+
+## Configuração
+
+Clone o projeto:
+
+```bash
+git clone https://github.com/SolidusJack/spring-ai-voice-budgeting-api.git
+```
+
+Configure a variável de ambiente:
+
+```text
+AUDIO_API_KEY=sua_chave
+```
+
+Configure também as credenciais do banco de dados e da OpenRouter no arquivo `application.properties`.
+
+Execute a aplicação:
+
+```bash
+mvn spring-boot:run
+```
+
+---
+
+# 🧪 Testando a API
+
+### Processamento de áudio
+
+**POST**
+
+```
+http://localhost:8080/api/audio/transcrever
+```
+
+**Body**
+
+```
+form-data
+
+Key:
+file (File)
+
+Value:
+arquivo.mp3
+```
+
+### Exemplo de resposta
 
 ```json
-"Perfeito! O gasto de R$ 50,00 com 'Gift Card Playstation' foi registrado com sucesso na categoria Entretenimento."
+{
+    "message": "Perfeito! O gasto de R$ 50,00 com 'Gift Card XBOX' foi registrado com sucesso na categoria Entretenimento."
+}
 ```
 
 ---
 
-## 🔮 Próximos Passos (Roadmap de Evolução)
+# 🔮 Roadmap
 
-O objetivo principal de integração entre Áudio, IA e Banco de Dados foi atingido. As próximas melhorias mapeadas são:
-
-- **Interface Web/Mobile (Frontend Interativo):** substituir o envio manual de arquivos `.mp3` no Postman por uma interface visual com botão de microfone (estilo WhatsApp), gravação em tempo real e disparo automático do fluxo.
-- **Validação de MIME Types:** adicionar filtros rígidos no backend para rejeitar arquivos corrompidos ou formatos inválidos.
-- **Filtro de Silêncio:** tratar requisições onde o áudio não possui fala capturada, evitando chamadas desnecessárias para o modelo.
+- Interface Web para gravação direta de áudio
+- Integração com gravação em tempo real pelo navegador
+- Validação de MIME Types
+- Tratamento de arquivos inválidos
+- Filtro para áudios sem fala
+- Text-to-Speech (resposta por voz)
 
 ---
 
-## 🧑‍💻 Autor
+# 👨‍💻 Autor
 
-Desenvolvido por **SolidusJack** — Estudante de Tecnologia.
+Desenvolvido por **SolidusJack**
+
+Estudante de Sistemas de Informação.
