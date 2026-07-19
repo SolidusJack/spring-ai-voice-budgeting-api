@@ -45,4 +45,23 @@ public class AudioController {
             return ResponseEntity.internalServerError().body("Erro ao processar o fluxo de áudio: " + e.getMessage());
         }
     }
+    
+    @PostMapping("/pergunta")
+    public ResponseEntity<String> perguntarPorTexto(@RequestParam("mensagem") String mensagem) {
+        try {
+            if (mensagem == null || mensagem.isBlank()) {
+                return ResponseEntity.badRequest().body("Por favor, digite uma pergunta válida.");
+            }
+
+            String respostaDaIa = this.chatClient
+                    .prompt(mensagem)
+                    .call()
+                    .content();
+            
+            return ResponseEntity.ok(respostaDaIa);
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Erro ao processar a pergunta: " + e.getMessage());
+        }
+    }
 }
